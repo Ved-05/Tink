@@ -7,6 +7,7 @@ import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.graph.Edge;
+import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.Vertex;
 import org.apache.flink.graph.spargel.GatherFunction;
 import org.apache.flink.graph.spargel.MessageIterator;
@@ -40,9 +41,13 @@ public class SingleSourceShortestPath<K> implements TGraphAlgorithm<K, Tuple2<Lo
         parameters.setName("Single Source Shortest Path");
         parameters.setSolutionSetUnmanagedMemory(true);
 
-        return input
-                .getGellyGraph()
-                .mapVertices(new InitVerticesMapper<>(srcVertexId))
+        long s = System.currentTimeMillis();
+        Graph<K, Tuple2<Long, Long>, Tuple3<Integer, Long, Long>> gellyGraph = input.getGellyGraph();
+        gellyGraph.getVertices().first(5);
+        long e = System.currentTimeMillis();
+        System.out.println("Gelly Graph conversion := " + (e - s));
+
+        return gellyGraph.mapVertices(new InitVerticesMapper<>(srcVertexId))
                 .runScatterGatherIteration(
                         new MinDistanceMessengerforTuplewithpath<>(),
                         new VertexDistanceUpdaterwithpath<>(this.timeSteps), this.timeSteps, parameters)

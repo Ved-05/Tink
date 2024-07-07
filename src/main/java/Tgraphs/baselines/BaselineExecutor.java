@@ -68,7 +68,7 @@ public class BaselineExecutor {
         final String inputDirectory = graph.equals("LDBC") ? "/data/hadoop/wicmi/ldbcMutationsProcessed/tink/time=" : "/data/hadoop/wicmi/tink/tinkRedditInputs/time=";
         final String outputDirectory = "/home/hadoop/jan-baseline/results/tink/" + graph + "/" + algorithm;
 
-        final File resultsFile = new File(outputDirectory + "/compute_time.csv");
+        final File resultsFile = new File(outputDirectory + "/compute_time_july.csv");
         if (!resultsFile.getParentFile().exists()) {
             if (!resultsFile.getParentFile().mkdirs())
                 throw new Exception("Could not create parent directories for output resultsFile");
@@ -89,40 +89,53 @@ public class BaselineExecutor {
         for (int i = start; i <= end; i+=increment) {
             switch (algorithm) {
                 case "SSSP":
-                    BaselineExecutor
-                            .loadTemporalGraph(inputDirectory + i, env)
-                            .run(new SingleSourceShortestPath<>(srcVertexId, i))
-                            .writeAsCsv(outputDirectory + "/results/" + i);
+                    long s = System.currentTimeMillis();
+                    Tgraph<Long, Tuple2<Long, Long>, Integer, Long> tGraph = BaselineExecutor.loadTemporalGraph(inputDirectory + i, env);
+
+                    long e = System.currentTimeMillis();
+                    System.out.println("Graph load time := " +  (e - s));
+
+                    s = System.currentTimeMillis();
+                    DataSet<Vertex<Long, Integer>> results = tGraph.run(new SingleSourceShortestPath<>(srcVertexId, i));
+                    results.first(5);
+                    e = System.currentTimeMillis();
+                    System.out.println("Results time := " +  (e - s));
+
+                    s = System.currentTimeMillis();
+//                    results.writeAsCsv(outputDirectory + "/results-july/" + i);
+                    e = System.currentTimeMillis();
+                    System.out.println("Graph write time := " +  (e - s));
                     break;
                 case "EAT":
                     BaselineExecutor
                             .loadTemporalGraph(inputDirectory + i, env)
                             .run(new EarliestArrivalTime<>(srcVertexId, i))
-                            .writeAsCsv(outputDirectory + "/results/" + i);
+                            .writeAsCsv(outputDirectory + "/results-july/" + i);
                     break;
                 case "TMST":
                     BaselineExecutor
                             .loadTemporalGraph(inputDirectory + i, env)
                             .run(new TemporalMST(srcVertexId, i))
-                            .writeAsCsv(outputDirectory + "/results/" + i);
+                            .writeAsCsv(outputDirectory + "/results-july/" + i);
                     break;
                 case "Reachability":
                     BaselineExecutor
                             .loadTemporalGraph(inputDirectory + i, env)
                             .run(new Reachability<>(srcVertexId, i))
-                            .writeAsCsv(outputDirectory + "/results/" + i);
+                            .writeAsCsv(outputDirectory + "/results-july/" + i);
                     break;
                 case "FAST":
                     BaselineExecutor
                             .loadTemporalGraph(inputDirectory + i, env)
                             .run(new FastestPathDuration<>(srcVertexId, i))
-                            .writeAsCsv(outputDirectory + "/results/" + i);
+                            .writeAsCsv(outputDirectory + "/results-july/" + i);
                     break;
                 default:
                     throw new IllegalArgumentException("Algorithm not supported");
             }
-
-            br.write(i + "," + env.execute().getNetRuntime() + "\n");
+            String log = i + "," + env.execute().getNetRuntime() + "\n";
+            br.write(log);
+            System.out.println(log);
             br.flush();
             if (i % 10 == 0) System.out.println("Finished " + i + " iterations.");
         }
